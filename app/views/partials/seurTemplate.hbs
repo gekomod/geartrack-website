@@ -1,0 +1,67 @@
+<!-- General SEUR template -->
+<script id="seur-template" type="text/x-handlebars-template">
+  <div class="row correos-h">
+        <div class="col-md-12">
+            <h2 class="label-warning clearfix">
+                <span>Seur:</span>
+                <a href="\{{ trackerWebsite }}" target="_blank" rel="noreferrer">
+                    <i class="fa fa-external-link"></i>
+                </a>
+            </h2>
+        </div>
+    </div>
+
+    \{{#if information.haveDetails }}
+    <div class="row">
+        <div class="col-md-12">
+            <table class="table table-bordered break-strong">
+                <tr>
+                    <td style="width: 40%">
+                        <strong>Remetente:</strong> \{{HelperCapitalize information.sender }}
+                    </td>
+                    <td style="width: 40%">
+                        \{{#if information.deliveryDate }}
+                        <strong>Data de Entrega:</strong> <u>\{{HelperDate information.deliveryDate }}</u>
+                        \{{else}}
+                        <strong>Data:</strong> \{{information.date}}
+                        \{{/if}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>Pacotes:</strong> \{{HelperCapitalize information.packages }}
+                    </td>
+                    <td>
+                        <strong>Peso:</strong> \{{HelperCapitalize information.weight }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    \{{/if}}
+
+
+    <div class="row">
+        <div class="col-md-12">
+            <h3><span class="label label-default">Estados:</span></h3>
+
+            <div class="result-details">
+                <dl class="des-block">
+
+                    \{{#each states as |item|}}
+                    <dd class="\{{HelperState item.state @first}}"><i></i>
+                        <div class="track-news clearfix">
+                                <span class="date" data-toggle="tooltip" data-placement="top" title="\{{HelperDateWithHours item.date }}">
+                                   \{{HelperFromNow item.date }}
+                                </span>
+                            <p><strong>\{{HelperCapitalize item.state }}</strong>
+                        </div>
+                    </dd>
+                    \{{/each}}
+                </dl>
+            </div>
+
+        </div>
+    </div>
+</script>
+<!-- End General PP template -->

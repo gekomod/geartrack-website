@@ -1,0 +1,21 @@
+@mixin background-opacity($color, $opacity: 0.6) {
+    background: $color; /* The Fallback */
+    background: rgba($color, $opacity);
+}
+
+@mixin clear() {
+	overflow:hidden;
+	clear:both;
+	float:none;
+}
+
+@mixin font-size($size) {
+  font-size: $size;
+  font-size: calculateRem($size);
+}
+
+@mixin bg-linear-gradient($direction, $color-stops...) {
+  background: nth(nth($color-stops, 1), 1);
+  background: linear-gradient($direction, $color-stops)!important;
+  background: -webkit-bg-linear-gradient($direction, $color-stops)!important;
+}

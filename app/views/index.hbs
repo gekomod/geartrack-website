@@ -1,0 +1,221 @@
+<!-- Title -->
+				<div class="row heading-bg">
+					<div class="col-lg-3 col-md-4 col-sm-4 col-xs-12">
+						<h5 class="txt-dark">Strona Główna</h5>
+					</div>
+					<!-- Breadcrumb -->
+					<div class="col-lg-9 col-sm-8 col-md-8 col-xs-12">
+						<ol class="breadcrumb">
+							<li><a href="/" class="active">Strona Główna</a></li>
+						</ol>
+					</div>
+					<!-- /Breadcrumb -->
+				</div>
+				<!-- /Title -->
+
+<div class="row">
+    
+    <div class="col-md-4">
+<div class="panel panel-info">
+<div class="panel-heading clearfix">
+    <div class="pull-left">
+    <h6 class="panel-title txt-light">Przesyłki</h6>
+        </div>
+    
+<div class="btn-group pull-right">
+<a href="#" class="btn btn-default btn-xs" data-toggle="modal" data-target="#addTrack">Dodaj Numer Przesyłki
+</a>
+</div>
+</div>
+<ul class="list-group track-entries" id="track-entries">
+
+<li class="list-group-item" id="emptyList" style="display: none;">
+Brak Numerów Przesyłek
+</li>
+</ul>
+</div>
+
+</div>
+
+    <div class="col-md-8" id="content" style="padding-top:0px!important;">
+        <div class="row" id="info">
+            <div class="col-md-12">
+                <div class="panel panel-default card-view">
+                    <div class="panel-heading">
+                        Informacje
+                    </div>
+                    <div class="panel-body">
+                        <p>Aby zobaczyć informacje o swoich zamówieniach, najpierw dodaj swoje identyfikatory w panelu Zamówień poniżej.</p>
+                        <p>Jeśli nie masz zamówienia, możesz zobaczyć, jak działa z tym identyfikatorem: <strong>PQ4F6P0705248940181750G</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="addTrack" tabindex="-1" role="dialog" aria-labelledby="addTrack">
+    <div class="modal-dialog" role="document">
+        <form id="controlForm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="myModalLabel">Śledź Przesyłke</h4>
+                </div>
+                <div class="modal-body">
+                    <div id='id-input' class="form-group">
+                        <label for="shipping_id">Tracking ID:</label>
+                        <input type="text" class="form-control" required id="shipping_id"
+                               placeholder="Wpisz identyfikator śledzenia przesyłki." maxlength="50" >
+                        <span class="help-block" id="help_block"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="postal_code">Opis</label>
+                        <input type="text" class="form-control" id="description" required
+                               placeholder="Dla łatwej identyfikacji, np .: telefon komórkowy">
+                    </div>
+                    <p class="small">Obs: wstawia identyfikator śledzenia, aby sprawdzić, czy jest on obsługiwany.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Anuluj</button>
+                    <button type="submit" id="send" class="btn btn-primary">Dodaj</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- /Modal -->
+
+<!-- Track list entry -->
+<script id="track-list-template" type="text/x-handlebars-template">
+    <li class="list-group-item">
+        <div class="row">
+            <div class="col-xs-6">
+                <h5 class="clickToGo">\{{description}}</h5>
+                <p>\{{id}}</p>
+            </div>
+            <div class="col-xs-6 text-right remove-container">
+                <button  class="btn btn-default btn-sm move">
+                    <i class="glyphicon glyphicon-resize-vertical"></i>
+                </button>
+                <button data-id="\{{id}}" class="btn btn-default btn-sm remove">
+                    <i class="glyphicon glyphicon-trash"></i>
+                </button>
+            </div>
+        </div>
+    </li>
+</script>
+<!-- /Track list entry -->
+
+<!-- Track Content Body -->
+<script id="track-content-template" type="text/x-handlebars-template">
+    <div class="row track clearfix" id="\{{id}}">
+        <div class="col-md-12">
+            <div class="panel panel-warning card-view border-panel panel-refresh">
+            <div class="refresh-container" style="display: none;">
+										<div class="la-anim-1"></div>
+									</div>
+                <div class="panel-heading">
+                   <div class="pull-left">
+                    <h5 class="heading"><a class="collapsed" role="button" data-toggle="collapse" href="#collapse_\{{id}}" aria-expanded="false">\{{description}}</a></h5>
+                    </div>
+                    
+                    <div class="pull-right">
+                                            <span class="label pull-left right-id mr-15 label-success capitalize-font inline-block ml-10">\{{id}}</span>
+                                            
+                                            <a class="pull-left inline-block mr-15" data-toggle="collapse" href="#collapse_\{{id}}" aria-expanded="true">
+                                                <i class="zmdi zmdi-chevron-down"></i>
+                                                <i class="zmdi zmdi-chevron-up"></i>
+										    </a>
+                                            
+											<a href="#" class="pull-left inline-block refresh mr-15" id="\{{id}}" title="\{{description}}">
+												<i class="zmdi zmdi-replay"></i>
+											</a>
+											<a href="#" class="pull-left inline-block full-screen">
+												<i class="zmdi zmdi-fullscreen"></i>
+											</a>
+                                    
+										</div>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="panel-body " id="collapse_\{{id}}">
+                    <img src="/img/loading.svg" class="center-img" width="30" alt="Loading" />
+
+                    <div class="c-panasia"></div>
+                    <div class="c-sky"></div>
+                    <div class="c-correoses"></div>
+                    <div class="c-correos"></div>
+                    <div class="c-correos-old"></div>
+                    <div class="c-expresso24"></div>
+                    <div class="c-adicional"></div>
+                    <div class="c-ctt"></div>
+                    <div class="c-pp"></div>
+                    <div class="c-seur"></div>
+                    <div class="c-rangel"></div>
+                    <div class="c-nacex"></div>
+                    <div class="c-aligeneral"></div>
+                    <div class="c-aligeneral1"></div>
+                    <div class="c-aligeneral2"></div>
+                    <div class="c-aligeneral3"></div>
+                    <div class="c-aligeneral4"></div>
+                    <div class="c-aligeneral5"></div>
+                    <div class="c-aligeneral6"></div>
+                    <div class="c-aligeneral7"></div>
+                    <div class="c-aligeneral8"></div>
+                    <div class="c-aligeneral9"></div>
+                    <div class="c-aligeneral10"></div>
+                    <div class="c-aligeneral11"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+<!-- /Track Content Body -->
+
+{{> skyTemplate }}
+
+{{> correosTemplate }}
+
+{{> correosOldTemplate }}
+
+{{> adicionalTemplate }}
+
+{{> expresso24Template }}
+
+{{> cttTemplate }}
+
+{{> ppTemplate }}
+
+{{> seurTemplate }}
+
+{{> rangelTemplate }}
+
+{{> nacexTemplate }}
+
+{{> aliTemplate }}
+
+{{> cainiaoEmpty }}
+
+<!-- No data template -->
+<script id="failed-template" type="text/x-handlebars-template">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="label-\{{ color }} clearfix">
+                <span>\{{ provider }}:</span>
+                <a href="\{{ link }}" target="_blank">
+                    <i class="fa fa-external-link"></i>
+                </a>
+            </h2>
+
+            \{{{ error }}}
+        </div>
+    </div>
+</script>
+<!-- /No data template -->
+
+{{#append 'scripts'}}
+    <script src="js/gear.js?v=56"></script>
+{{/append}}

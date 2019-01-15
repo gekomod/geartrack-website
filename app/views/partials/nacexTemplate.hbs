@@ -1,0 +1,58 @@
+<script id="nacex-template" type="text/x-handlebars-template">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="label-\{{ color }} clearfix">
+                <span>\{{ provider }}:</span>
+
+                \{{#if trackerWebsite}}
+                <a href="\{{ trackerWebsite }}" target="_blank"
+                   rel="noreferrer">
+                    <i class="fa fa-external-link"></i>
+                </a>
+                \{{/if}}
+            </h2>
+
+            \{{#if estimatedDelivery }}
+            <table class="table table-bordered break-strong">
+                <tr>
+                    <td>
+                        <strong>Referencia:</strong> \{{ information.ref }}
+                    </td>
+                    <td>
+                        <strong>Data de entrega:</strong> \{{ estimatedDelivery }}
+                    </td>
+                </tr>
+            </table>
+            \{{/if}}
+
+            \{{#if states}}
+            <h3><span class="label label-default">Estados:</span></h3>
+
+            <div class="result-details">
+                <dl class="des-block">
+                    \{{#each states as |item| }}
+                    <dd class="\{{HelperState item.state @first}}"><i></i>
+                        <div class="track-news clearfix">
+                             <span class="date" data-toggle="tooltip"
+                                   data-placement="top"
+                                   title="\{{HelperDateWithHours item.date }}">
+                                   \{{HelperFromNow item.date }}
+                            </span>
+                            <p title="\{{ item.title }}">
+                                \{{#if item.area}}
+                                <strong>\{{HelperCapitalize item.state
+                                    }}</strong> <span class="area-break">\{{HelperCapitalize item.area }}</span>
+                                \{{else}}
+                                \{{HelperCapitalize item.state }}
+                                \{{/if}}
+                            </p>
+                        </div>
+                    </dd>
+                    \{{/each}}
+                </dl>
+            </div>
+            \{{/if}}
+
+        </div>
+    </div>
+</script>

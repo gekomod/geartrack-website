@@ -1,0 +1,63 @@
+<!-- Top Menu Items -->
+			<nav class="navbar navbar-inverse navbar-fixed-top">
+				<div class="nav-wrap">
+				<div class="mobile-only-brand pull-left">
+					<div class="nav-header pull-left">
+						<div class="logo-wrap">
+							<a href="/">
+								<img class="brand-img" src="../img/logo.png" alt="brand"/>
+								<span class="brand-text"><img  src="../img/brand.png" alt="brand"/></span>
+							</a>
+						</div>
+					</div>	
+					<a id="toggle_nav_btn" class="toggle-left-nav-btn inline-block ml-20 pull-left" href="javascript:void(0);"><i class="zmdi zmdi-menu"></i></a>
+					<a id="toggle_mobile_nav" class="mobile-only-view" href="javascript:void(0);"><i class="zmdi zmdi-more"></i></a>
+				</div>
+				</div>
+			</nav>
+			<!-- /Top Menu Items -->			
+			<!-- Left Sidebar Menu -->
+			<div class="fixed-sidebar-left">
+				<ul class="nav navbar-nav side-nav nicescroll-bar">
+					<li class="navigation-header">
+						<span>Main</span> 
+						<hr/>
+					</li>
+					<li>
+						<a href="/" data-toggle="collapse" data-target="#dashboard_dr"><div class="pull-left"><i class="ti-dashboard mr-20"></i><span class="right-nav-text">Strona Głowna</span></div><div class="pull-right"><i class="ti-angle-down"></i></div><div class="clearfix"></div></a>
+					</li>
+					<li>
+						<a href="/news"><div class="pull-left"><i class="ti-book mr-20"></i><span class="right-nav-text">Wiadomości</span></div><div class="clearfix"></div></a>
+					</li>
+                    <li>
+						<a href="/faqs"><div class="pull-left"><i class="ti-book mr-20"></i><span class="right-nav-text">Faq</span></div><div class="clearfix"></div></a>
+					</li>
+                    <li>
+						<a href="/app"><div class="pull-left"><i class="ti-book mr-20"></i><span class="right-nav-text">Aplikacja</span></div><div class="clearfix"></div></a>
+					</li>
+					<li>
+						<a href="/about"><div class="pull-left"><i class="ti-book mr-20"></i><span class="right-nav-text">O Nas</span></div><div class="clearfix"></div></a>
+					</li>
+                        {{#if user}}
+                    <li><a class="active" href="javascript:void(0);" data-toggle="collapse" data-target="#comp_dr">Panel użytkownika<div class="clearfix"></div></a>
+                    <ul id="comp_dr" class="collapse collapse-level-1">
+						<li>
+								<a href="#">Witaj {{user.email}}</a>
+							</li>
+                        <li>
+								<a href="/panel">Twój Profil</a>
+							</li>
+                        <li>
+								<a href="/logout">Wyloguj</a>
+							</li>
+                        </ul>
+                    </li>
+                                               
+                                              {{else}}
+                                                 <li><a href='/login'>Zaloguj się<div class="clearfix"></div></a></li>
+                                                 <li><a href='/signup'>Rejestracja<div class="clearfix"></div></a></li>
+                                              {{/if}}
+                    
+				</ul>
+			</div>
+			<!-- /Left Sidebar Menu -->

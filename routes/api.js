@@ -34,7 +34,11 @@ let providers = {
   'correosOld': new Provider('Correos Express Antigo', 'danger'),
   'mrw': new Provider('MRW', 'primary'),
   'ips': new Provider('IPS', 'yellow'),
-  'track17': new Provider('17track', 'warning')
+  'track17': new Provider('17track', 'warning'),
+  'pp': new Provider('Poczta Polska', 'warning'),
+  'general': new Provider('General Post', 'warning'),
+  'flytExpress': new Provider('Flytexpress', 'success'),
+  'ups': new Provider('ups', 'info') 
 }
 
 /**
@@ -134,27 +138,27 @@ function processErrorResponse (err, res, info) {
 
   switch (type) {
     case 'BUSY':
-      message = 'O servidor estÃ¡ sobrecarregado, tenta novamente daqui a um minuto.'
+      message = 'Serwer jest przeciazony, spróbuj ponownie za minute.'
       cacheSeconds = 60 // cache for 1min
       break
     case 'UNAVAILABLE':
-      message = 'O servidor nÃ£o estÃ¡ disponÃ­vel de momento. Tenta mais tarde.'
+      message = 'Serwer jest teraz niedostepny. Spróbuj ponownie pózniej.'
       break
     case 'DOWN':
     case 'EMPTY':
-      message = 'De momento este serviÃ§o estÃ¡ com problemas. Tenta mais tarde.'
+      message = 'Ta usluga ma obecnie klopoty. Spróbuj ponownie pózniej.'
       break
     case 'PARSER':
       if(info.provider != 'correosOld' && bugsnag) bugsnag.notify(err) // send error to be analysed
-      message = 'De momento estamos com dificuldade em aceder Ã  informaÃ§Ã£o deste servidor. Tenta mais tarde.'
+      message = 'Mamy obecnie problem z dostepem do informacji o tym serwerze. Spróbuj ponownie pózniej.'
       break
     case 'ACTION_REQUIRED':
       if(bugsnag) bugsnag.notify(err) // send error to be analysed
       cacheSeconds = 0 // prevent cache
-      message = 'Este tracker pode precisar de um passo adicional no seu website. Se efetuares esse passo volta e atualiza a pagina para tentarmos de novo! :)'
+      message = 'Ten tracker moze wymagac dodatkowego kroku w Twojej witrynie. Jeœli wykonasz ten krok z powrotem i odswiezysz strone, aby spróbowac ponownie! :)'
       break
     default: // NO_DATA
-      message = 'Ainda nÃ£o existe informaÃ§Ã£o disponÃ­vel para este ID.'
+      message = 'Nie ma jeszcze informacji o tym identyfikatorze.'
       break
   }
 
@@ -181,7 +185,7 @@ function validateId (req, res, next) {
   let id = req.query.id
 
   if (!id) {
-    res.status(400).json({error: 'ID must be passed in the query string!'})
+    res.status(400).json({error: 'Identyfikator musi zostaæ przekazany w ciagu zapytania!'})
     return
   }
 
@@ -192,7 +196,7 @@ function validatePostalCode (req, res, next) {
   let postalcode = req.query.postalcode
 
   if (!postalcode) {
-    res.status(400).json({error: 'Postalcode must be passed in the query string!'})
+    res.status(400).json({error: 'Kod pocztowy musi zostaæ przekazany w ciagu zapytania!'})
     return
   }
 

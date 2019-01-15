@@ -1,0 +1,53 @@
+<!-- General PP template -->
+<script id="pp-template" type="text/x-handlebars-template">
+    <form id="exaple-advanced-form" class="shoping-cart wizard clearfix" action="#" role="application">
+    <div class="steps clearfix">
+    <ul role="tablist">
+    <li role="tab" class="first current" aria-disabled="false" aria-selected="true">
+    <a id="example-advanced-form-t-0" href="#example-advanced-form-h-0" aria-controls="example-advanced-form-p-0">
+    <span class="number">
+    <i class="glyphicon glyphicon-plane txt-black"></i>
+    </span>
+    <span class="head-font capitalize-font">Z Kraju \{{ origin }}</span></a>
+    </li>
+    <li role="tab" class="disabled" aria-disabled="true"><a id="example-advanced-form-t-1" href="#example-advanced-form-h-1" aria-controls="example-advanced-form-p-1"><span class="number"><i class="glyphicon glyphicon-road txt-black"></i></span><span class="head-font capitalize-font">Kraj Przeznaczenia \{{ destiny }}</span></a></li></ul></div></form>
+
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="label-\{{ color }} clearfix">
+                <span>\{{ provider }}:</span>
+                <a href="\{{ trackerWebsite }}" target="_blank">
+                    <i class="fa fa-external-link"></i>
+                </a>
+            </h2>
+
+            \{{#if states}}
+            <h3><span class="label label-default">Sledzenie PP:</span></h3>
+
+            <div class="result-details">
+                <dl class="des-block">
+                    \{{#each states as |item| }}
+                    <dd class="\{{HelperState item.state @last}}"><i></i>
+                        <div class="track-news">
+                             <span class="date" data-toggle="tooltip" data-placement="top"
+                                   title="\{{HelperDateWithHours item.date }}">
+                                   \{{HelperFromNow item.date }}
+                            </span>
+                            <p title="\{{ item.title }}">
+                                \{{#if item.area}}
+                                <strong>\{{HelperCapitalize item.state }}</strong> <span class="area-break">\{{HelperCapitalizeWords item.area }}</span>
+                                \{{else}}
+                                \{{HelperCapitalize item.state }}
+                                \{{/if}}
+                            </p>
+                        </div>
+                    </dd>
+                    \{{/each}}
+                </dl>
+            </div>
+            \{{/if}}
+
+        </div>
+    </div>
+</script>
+<!-- /General PP template -->

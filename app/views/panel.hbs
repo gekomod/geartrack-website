@@ -1,0 +1,120 @@
+<div class="row heading-bg">
+						<div class="col-lg-3 col-md-4 col-sm-4 col-xs-12">
+						  <h5 class="txt-dark">Panel Użytkownika</h5>
+						</div>
+						<!-- Breadcrumb -->
+						<div class="col-lg-9 col-sm-8 col-md-8 col-xs-12">
+						  <ol class="breadcrumb">
+							<li><a href="/">Strona Główna</a></li>
+							<li><a href="#"><span>Logowanie</span></a></li>
+							<li class="active"><span>Panel Użytkownika</span></li>
+						  </ol>
+						</div>
+						<!-- /Breadcrumb -->
+					</div>
+<div class="row">
+       <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                              <div class="panel panel-default card-view">
+								<div class="panel-heading">
+									<div class="pull-left">
+										<h6 class="panel-title txt-dark">Menu</h6>
+									</div>
+									<div class="clearfix"></div>
+								</div>
+								<div class="panel-wrapper collapse in">
+									<div class="panel-body">                                        
+                                        <div class="list-group" id="list-tab" role="tablist">
+      <a class="list-group-item list-group-item-action active" id="list-home-list" data-toggle="list" href="/panel" role="tab" aria-controls="home">Twoje Konto</a>
+      <a class="list-group-item list-group-item-action" id="list-profile-list" data-toggle="list" href="#list-profile" role="tab" aria-controls="profile">Doręczone</a>
+      <a class="list-group-item list-group-item-action" id="list-messages-list" data-toggle="list" href="#list-messages" role="tab" aria-controls="messages">W Doręczeniu</a>
+      <a class="list-group-item list-group-item-action" id="list-settings-list" data-toggle="list" href="/logout" role="tab" aria-controls="settings">Wyloguj</a>
+    </div>
+									</div>
+								</div>
+							</div>
+        </div>
+    
+        <div class="col-lg-8 col-md-8 col-sm-6 col-xs-12">
+                             <div class="panel panel-default panel-tabs card-view">
+								<div class="panel-heading">
+									
+										<div class="tab-struct custom-tab-1">
+                                            <div class="pull-left">
+											<ul role="tablist" class="nav nav-tabs" id="myTabs_9">
+												<li class="active" role="presentation"><a aria-expanded="true" data-toggle="tab" role="tab" id="home_tab_9" href="#home_9">Dashboard</a></li>
+                                                <li role="presentation" class=""><a data-toggle="tab" id="add_tab_1" role="tab" href="#add_1" aria-expanded="false">Dodaj Numer Przesyłki</a></li>
+                                                <li role="presentation" class=""><a data-toggle="tab" id="profile_tab_8" role="tab" href="#profile_8" aria-expanded="false">Przesyłki</a></li>
+												<li role="presentation" class=""><a data-toggle="tab" id="profile_tab_9" role="tab" href="#profile_9" aria-expanded="false">Ustawienia</a></li>
+											</ul>
+                                            </div>
+                                            <div class="pull-right">
+                                              {{#if user}}
+                                                <p>Witaj {{user.email}}</p>
+                                              {{else}}
+                                                <p>Proszę <a href='/login'>Zaloguj się</a></p>
+                                              {{/if}}
+                                            </div>
+										</div>	
+									
+									
+									<div class="clearfix"></div>
+								</div>
+								<div class="panel-wrapper collapse in">
+									<div class="panel-body">
+										<div class="tab-content" id="myTabContent_9">
+											<div id="home_9" class="tab-pane fade active in" role="tabpanel">
+												<p>Lorem ipsum dolor sit amet, et pertinax ocurreret scribentur sit, eum euripidis assentior ei. In qui quodsi maiorum, dicta clita duo ut. Fugit sonet quo te.</p>
+											</div>
+											<div id="profile_9" class="tab-pane fade" role="tabpanel">
+												<p>Food truck fixie locavore, accusamus mcsweeney's marfa nulla single-origin coffee squid. Exercitation +1 labore velit, blog sartorial PBR leggings next level wes anderson artisan four loko farm-to-table craft beer twee.</p>
+											</div>
+                                            <div id="profile_8" class="tab-pane fade" role="tabpanel">
+												
+                                                <table class="table mb-0">
+												<thead>
+												  <tr>
+													<th>#</th>
+													<th>Track Number</th>
+													<th>Description</th>
+													<th>Status</th>
+												  </tr>
+												</thead>
+												<tbody>
+{{#each przesy}}
+                                                    <tr>
+													<td>{{this.order}}</td>
+													<td>{{this.id}}</td>
+													<td>{{this.description}}</td>
+													<td>{{#compare this.loaded '==' 'true'}}<span class="label label-success">Active</span>{{else}}
+                                                        <span class="label label-danger">Not Active</span>
+                                                        {{/compare}}</td>
+												  </tr>
+                                                    
+{{/each}}
+												</tbody>
+											</table>
+                                                
+											</div>
+                                            <div id="add_1" class="tab-pane fade" role="tabpanel">
+                                                <form action="/panel/add" method="post">
+                                                    <div id="id-input" class="form-group">
+                                                        <label for="shipping_id">Tracking ID:</label>
+                                                        <input type="text" class="form-control" required="" id="shipping_id" name="shipping_id" placeholder="Wpisz identyfikator śledzenia przesyłki." maxlength="50">
+                                                        <span class="help-block" id="help_block"></span>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="postal_code">Opis</label>
+                                                        <input type="text" class="form-control" id="description" required="" name="description" placeholder="Dla łatwej identyfikacji, np .: telefon komórkowy">
+                                                    </div>
+                                                    <input type="submit" name="wyslij" value="Dodaj">
+                                                    </form>
+                                                
+                                                
+                                                    <p class="small">Obs: wstawia identyfikator śledzenia, aby sprawdzić, czy jest on obsługiwany.</p>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+        </div>
+</div>

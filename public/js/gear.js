@@ -27,8 +27,12 @@ var tracks = []
  |--------------------------------------------------------------------------
  */
 var trackEntryTemplate = Handlebars.compile($('#track-list-template').html()),
-  trackContentTemplate = Handlebars.compile($('#track-content-template').html()),
+  trackContentTemplate = Handlebars.compile(
+    $('#track-content-template').html(),
+    { noEscape: true }
+  ),
   skyTemplate = Handlebars.compile($('#sky-template').html()),
+  seurTemplate = Handlebars.compile($('#seur-template').html()),
   correosTemplate = Handlebars.compile($('#correos-template').html()),
   //correosOldTemplate = Handlebars.compile($('#correos-old-template').html()),
   adicionalTemplate = Handlebars.compile($('#adicional-template').html()),
@@ -36,8 +40,10 @@ var trackEntryTemplate = Handlebars.compile($('#track-list-template').html()),
   cttTemplate = Handlebars.compile($('#ctt-template').html()),
   ppTemplate = Handlebars.compile($('#pp-template').html()),
   aliExpressTemplate = Handlebars.compile($('#ali-template').html()),
+  nacexTemplate = Handlebars.compile($('#nacex-template').html()),
   failedTemplate = Handlebars.compile($('#failed-template').html()),
-  cainiaoEmpty = Handlebars.compile($('#cainiao-empty-template').html())
+  cainiaoEmpty = Handlebars.compile($('#cainiao-empty-template').html()),
+  rangelTemplate = Handlebars.compile($('#rangel-template').html())
 
 /*
  |--------------------------------------------------------------------------
@@ -53,8 +59,11 @@ var help_block2 = $('#help_block'),
 var idInvalidString = 'Esse tipo de ID ainda não é suportado <i class="fa fa-frown-o"></i>, fala connosco para adicionarmos!',
   idMaybeNotValid = 'Esse id parece ser o order number da Gearbest, não será o <strong>tracking number</strong> que pretendes? <i class="fa fa-smile-o"></i>'
 
-shippingId.on('input paste', function () {
-  var inserted = $(this).val().replace(/[^\x00-\x7F]/, '') // remove non asci chars
+shippingId.on('input paste', function() {
+  var inserted = $(this)
+    .val()
+    .trim()
+    .replace(/[^\x00-\x7F]/, '') // remove non asci chars
 
   $(this).val(inserted) // update the input
 
@@ -64,16 +73,27 @@ shippingId.on('input paste', function () {
   }
 
   if (isValidID(inserted)) {
-    if (/^W.+$/.test(inserted)) {
-      inputFeedback('has-warning', idMaybeNotValid, true)
-      return
-    }
+    // if (/^038[0-9]+$/.test(inserted)) {
+    //   inputFeedback('has-warning', idSEURnum, true)
+    //   return
+    // }
 
     inputFeedback('has-success', null, false)
   } else {
+    if (/^W.+$/.test(inserted)) {
+      inputFeedback('has-error', idMaybeNotValid, true)
+      return
+    }
+
+    if (/^EU.+$/.test(inserted)) {
+      inputFeedback('has-error', idEUDpd, true)
+      return
+    }
+
     inputFeedback('has-error', idInvalidString, true)
   }
 })
+
 
 function inputFeedback (classType, message, showHelp) {
   form_group.attr('class', 'form-group ' + classType)
@@ -90,10 +110,13 @@ function inputFeedback (classType, message, showHelp) {
 /**
  * Add track
  */
-form.submit(function (event) {
+form.submit(function(event) {
   event.preventDefault()
 
-  var id = shippingId.val().trim().toUpperCase(),
+  var id = shippingId
+      .val()
+      .trim()
+      .toUpperCase(),
     desc = description.val().trim()
 
   if (!isValidID(id) || desc.length == 0) {
@@ -101,9 +124,22 @@ form.submit(function (event) {
     return
   }
 
-  var track = new Track(id, capitalizeFirstLetter(desc))
+  if (/^MPS.+/.test(id)) {
+    id = id.replace('MPS', '')
+  }
 
-  if (storageAddTrack(track)) { // new one
+  var track = new Track(id, capitalizeFirstLetter(desc))
+  var lastOrder = 0
+  if (tracks.length > 0) {
+    lastOrder = tracks[tracks.length - 1].order
+    if (isNaN(lastOrder)) lastOrder = 0
+  }
+  console.log('last order:', lastOrder)
+
+  track.order = lastOrder - 1
+
+  if (storageAddTrack(track)) {
+    // new one
     loadTrackToContent(track)
     tracks.push(track)
   } else {
@@ -116,6 +152,24 @@ form.submit(function (event) {
   shippingId.val('')
   description.val('')
   popup.modal('hide')
+
+  jumbotron.hide()
+  localStorage.setItem('info5', 0)
+})
+
+$(document).on('click', '.clickToGo', function(e) {
+  var id = $(this)
+    .siblings('p')
+    .text()
+  console.log(id)
+  var offset = $('#' + id).offset().top - 55
+
+  $('html, body').animate(
+    {
+      scrollTop: offset
+    },
+    500
+  )
 })
 
 /**
@@ -123,11 +177,13 @@ form.submit(function (event) {
  * Event listener for the remove functionality
  * catches dynamically added elements aswell
  */
-$(document).on('click', '.remove', function (e) {
+$(document).on('click', '.remove', function(e) {
   e.preventDefault()
 
   var id = $(this).data('id')
-  $(this).closest('tr').remove()
+  $(this)
+    .closest('li')
+    .remove()
   $('#' + id).remove()
 
   storageRemoveTrack(id)
@@ -144,56 +200,303 @@ if (localStorage.getItem('info5') == null) {
   jumbotron.show()
 }
 
-$('#hide-button').click(function (e) {
+$('#hide-button').click(function(e) {
   e.preventDefault()
 
   jumbotron.hide()
   localStorage.setItem('info5', 0)
 })
 
+$(document).on('click', '.track .panel-heading', function(e) {
+  var id = $(this)
+    .find('.right-id')
+    .text()
+  var body = $(this).siblings('.panel-body')
+
+  var trackEntity = null
+  for (var i = 0; i < tracks.length; ++i) {
+    if (tracks[i].id == id) {
+      trackEntity = tracks[i]
+      break
+    }
+  }
+
+  var isCollapsed = trackEntity.collapsed
+  trackEntity.collapsed = !isCollapsed
+
+  if (isCollapsed) {
+    body.slideDown()
+  } else {
+    body.slideUp()
+  }
+
+  if (isCollapsed) {
+    //We only need data when the tracking is collapsed and will be shown
+    if (!trackEntity.loaded) {
+      console.log('ID: ' + trackEntity.id + ' not loaded, starting loading.')
+      startLoadingTracker(trackEntity)
+    } else {
+      console.log('ID: ' + trackEntity.id + ' already loaded, ignoring.')
+    }
+  }
+
+  saveEntityInStorage(trackEntity)
+})
+
+trackEntries.sortable({
+  handle: '.move',
+  onDrop: onDropItem
+})
+
+var orderInfo = $('#order-info')
+
+function onDropItem($item, container, _super, event) {
+  var idsOrder = []
+  trackEntries.children().each(function() {
+    var elem = $(this)
+    var id = elem.find('p').text()
+
+    if (id) idsOrder.push(id)
+  })
+  console.log(idsOrder)
+
+  for (var i = 0; i < tracks.length; ++i) {
+    tracks[i].order = idsOrder.indexOf(tracks[i].id)
+    saveEntityInStorage(tracks[i])
+  }
+
+  orderInfo.slideDown()
+
+  _super($item, container)
+}
 /*
  |--------------------------------------------------------------------------
  | Content info logic
  |--------------------------------------------------------------------------
  */
-function loadTrackToContent (trackEntity) {
+function loadTrackToContent(trackEntity) {
   addEntryToPage(trackEntity)
   addEntryToContent(trackEntity)
 
+  trackEntity.loaded = false
+  startLoadingTracker(trackEntity)
+}
+
+function startLoadingTracker(trackEntity) {
   var elId = $('#' + trackEntity.id),
     elBody = elId.find('.panel-body')
 
-  var ending = trackEntity.id.charAt(trackEntity.id.length - 2)
-    + trackEntity.id.charAt(trackEntity.id.length - 1)
+  if (trackEntity.collapsed) {
+    elBody.hide()
+    return
+  }
+
+  trackEntity.loaded = true
+
+  var ending =
+    trackEntity.id.charAt(trackEntity.id.length - 2) +
+    trackEntity.id.charAt(trackEntity.id.length - 1)
+
+  if (trackEntity.id.length >= 22 && /^007\d+/.test(trackEntity.id)) {
+    if (/.+001$/.test(trackEntity.id)) {
+      trackEntity.id = trackEntity.id.substring(0, trackEntity.id.length - 3)
+    }
+    loadAliProvider(elBody, trackEntity, 'tourlineexpress', false)
+    return
+  }
+
+  if (ending == 'GB') {
+    loadRoyalMailTracker(elBody, trackEntity)
+    return
+  }
+
+  if (ending == 'PT') {
+    loadCttProvider(elBody, trackEntity)
+    return
+  }
+
+  if (/^[KWT]{3}[A-Z]{2}[0-9]{10}YQ$/.test(trackEntity.id)) {
+    loadDoubleAliProvider(elBody, trackEntity, 'general', 'flytExpress', true)
+    return
+  }
+
+  if (/^EE.+$/.test(trackEntity.id) && trackEntity.id.length >= 20) {
+    loadAliProvider(elBody, trackEntity, 'postalNinja', false, true)
+    return
+  }
+
+  if (/-.+EE$/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'seur', false, true)
+    return
+  }
+
+  if (/^TSLNL.+/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'postNL', true, false)
+    return
+  }
+
+  if (/^UD.+NL$/.test(trackEntity.id)) {
+    loadSkyAndOther(elBody, trackEntity, 'postNL')
+    return
+  }
+
+  if (/^U.+CN$/.test(trackEntity.id)) {
+    // loadDoubleAliProvider(elBody, trackEntity, 'sky56', 'trackchinapost', true)
+    loadSkyAndAliProvider(elBody, trackEntity, 'general', 'pp')
+    return
+  }
+
+  if (/^CNCID.+$/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'dhlecommerce', false)
+    return
+  }
+
+  if (/^BFD.+/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'seur', false, true)
+    return
+  }
+
+  if (/^SEU.+/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'seur', false, true)
+    return
+  }
+
+  if (/^PW-.+/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'seur', false, true)
+    return
+  }
+
+  if (/^SGLBY.+/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'dhlecommerce', true)
+    return
+  }
+
+  if (/^ZW.+/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'gls', false)
+    return
+  }
+
+  if (/^BLVS.+/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'bpost', false)
+    return
+  }
+
+  if (/^NR.+/.test(trackEntity.id)) {
+    loadNetherlandsPost(elBody, trackEntity)
+    return
+  }
+
+  if (/^NL.+$/.test(trackEntity.id)) {
+    loadNetherlandsPost(elBody, trackEntity)
+    return
+  }
+
+  if (/^ES.+/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'rangel', false)
+    return
+  }
+
+  if (/^SU.+/.test(trackEntity.id)) {
+    loadSuSeurProvider(elBody, trackEntity)
+    notifyNewId(trackEntity.id)
+    return
+  }
+
+  if (/^P\d+$/.test(trackEntity.id)) {
+    loadSkyAndAliProvider(elBody, trackEntity, 'singpost')
+    return
+  }
+
+  if (/^F\d+$/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'flytExpress', false)
+    return
+  }
 
   switch (trackEntity.id.charAt(0)) {
+    case '1':
+      if (trackEntity.id.charAt(1) == 'Z') {
+        loadDoubleAliProvider(elBody, trackEntity, 'th_origin', 'ups', false)
+      } else if (/^1550.+/.test(trackEntity.id)) {
+        loadTripleAliProvider(
+          elBody,
+          trackEntity,
+          'chronopost',
+          'dpdde',
+          'dpduk',
+          false
+        )
+
+        getProviderData('dpduk_origin', trackEntity.id)
+          .then(function(data) {
+            elBody.find('.c-aligeneral4').append(aliExpressTemplate(data))
+          })
+          .catch(function(error) {})
+      } else {
+        loadDefaultTracker(elBody, trackEntity)
+      }
+      break
     case 'A':
       if (/^A[0-9]+$/.test(trackEntity.id)) {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17','cainiao', false)
-        notifyNewId(trackEntity.id)
+        loadDefaultTracker(elBody, trackEntity)
+      } else if (/^A.+P$/.test(trackEntity.id)) {
+        loadAliProvider(elBody, trackEntity, 'flytExpress', false)
       } else {
         loadAliProvider(elBody, trackEntity, 'yanwen', false)
       }
       break
     case 'B':
       if (ending == 'CN') {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'cainiao', false)
+        loadTripleAliProvider(
+          elBody,
+          trackEntity,
+          'general',
+          'postalNinja',
+          'cainiao',
+          false
+        )
       } else {
-        loadTripleAliProvider(elBody, trackEntity, 'track24', 'cainiao', 'track17', false)
-        notifyNewId(trackEntity.id)
+        loadTripleAliProvider(
+          elBody,
+          trackEntity,
+          'general',
+          'postalNinja',
+          'cainiao',
+          false
+        )
       }
-
       break
     case 'C':
-      loadDoubleAliProvider(elBody, trackEntity, 'track24', 'trackchinapost', true)
-      notifyNewId(trackEntity.id)
+      if (/^C.+PT$/.test(trackEntity.id)) {
+        loadCttProvider(elBody, trackEntity)
+      } else if (/^C.+DE$/.test(trackEntity.id)) {
+        loadTripleAliProvider(
+          elBody,
+          trackEntity,
+          'dhlde_origin',
+          'dhlde',
+          'dhlparcel',
+          false
+        )
+      } else if (/^C.+FR$/.test(trackEntity.id)) {
+        loadAliProvider(elBody, trackEntity, 'general', true, true)
+      } else {
+        loadTripleAliProvider(
+          elBody,
+          trackEntity,
+          'general',
+          'postalNinja',
+          'trackchinapost',
+          true
+        )
+      }
       break
     case 'D':
       if (ending == 'PT') {
         loadCttProvider(elBody, trackEntity)
+      } else if (/^DH.+$/.test(trackEntity.id)) {
+        loadAliProvider(elBody, trackEntity, 'cainiao')
       } else {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17','cainiao', false)
-        notifyNewId(trackEntity.id)
+        loadDefaultTracker(elBody, trackEntity)
       }
 
       break
@@ -202,35 +505,43 @@ function loadTrackToContent (trackEntity) {
       break
     case 'E':
       if (trackEntity.id.charAt(1) == 'Y') {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17','cainiao', false)
-        notifyNewId(trackEntity.id)
+        loadDefaultTracker(elBody, trackEntity)
+      } else if (ending == 'SG') {
+        loadAliProvider(elBody, trackEntity, 'singpost', true)
       } else if (ending == 'PT') {
         loadCttProvider(elBody, trackEntity)
       } else {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17','cainiao', false)
-        notifyNewId(trackEntity.id)
+        loadDefaultTracker(elBody, trackEntity)
       }
       break
     case 'N':
     case 'L':
-      if (/^L.+CN$/.test(trackEntity.id)) {
-        loadAliProvider(elBody, trackEntity, 'cainiao')
+      if (/^L.+NL$/.test(trackEntity.id)) {
+        loadAliProvider(elBody, trackEntity, 'postNL')
+      } else if (/^L.+CN$/.test(trackEntity.id)) {
+        loadAliProvider(elBody, trackEntity, 'cainiao', false)
       } else if (/^L.+PT$/.test(trackEntity.id)) {
         loadCttProvider(elBody, trackEntity)
+      } else if (/^L.+SE$/.test(trackEntity.id)) {
+        loadDoubleAliProvider(
+          elBody,
+          trackEntity,
+          'postalNinja',
+          'directlink',
+          true
+        )
       } else if (/^LP.+$/.test(trackEntity.id)) {
-        loadYanwen(elBody, trackEntity)
+        // loadYanwen(elBody, trackEntity)
+        //   loadDefaultTracker(elBody, trackEntity)
+        loadDoubleAliProvider(elBody, trackEntity, 'pp', 'cainiao',false)
       } else if (/^LA.+$/.test(trackEntity.id)) {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17','cainiao', false)
-        notifyNewId(trackEntity.id)
+        loadDefaultTracker(elBody, trackEntity)
       } else if (/^LV.+$/.test(trackEntity.id)) {
-        loadNetherlandsPost(elBody, trackEntity)
-      } else if (/^NL.+$/.test(trackEntity.id)) {
-        loadNetherlandsPost(elBody, trackEntity)
+        loadAliProvider(elBody, trackEntity, 'bpost', false)
       } else if (/^LB.+$/.test(trackEntity.id)) {
-        loadDoubleAliProvider(elBody, trackEntity,'pp','cainiao', false)
-      } else {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17','cainiao', false)
-        notifyNewId(trackEntity.id)
+        loadPPProvider(elBody, trackEntity, 'pp', false)
+      }else {
+        loadDefaultTracker(elBody, trackEntity)
       }
       break
     case 'S':
@@ -240,127 +551,211 @@ function loadTrackToContent (trackEntity) {
       } else if (/^S\d+/.test(trackEntity.id)) {
         loadAliProvider(elBody, trackEntity, 'cainiao', false)
       } else if (/^SY[a-zA-Z0-9]+$/.test(trackEntity.id)) {
-        loadSkyAndAliProvider(elBody, trackEntity, 'track24')
+        loadSkyAndAliProvider(elBody, trackEntity, 'malaysiaPos')
       } else if (/^GE.+$/.test(trackEntity.id)) {
-        loadSkyAndAliProvider(elBody, trackEntity, 'malaysiaPos')
-      } else if (/^SG.+$/.test(trackEntity.id)) {
-        loadSkyAndAliProvider(elBody, trackEntity, 'malaysiaPos')
+        loadSkyAndAliProvider(elBody, trackEntity, 'malaysiaPos') // malasya pos
+      } else if (/^G.+PT$/.test(trackEntity.id)) {
+        loadCttProvider(elBody, trackEntity)
+        break
       } else {
-        loadDoubleAliProvider(elBody, trackEntity, 'cainiao','pp', false)
-        notifyNewId(trackEntity.id)
+        loadDefaultTracker(elBody, trackEntity)
       }
       break
     case 'P':
       if (/^PQ.+$/.test(trackEntity.id)) {
-        loadAliProvider(elBody, trackEntity)
+        loadSpainExpress(elBody, trackEntity)
       } else {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'cainiao', false)
-        notifyNewId(trackEntity.id)
+        loadDefaultTracker(elBody, trackEntity)
       }
+
       break
     case 'K':
-      loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17','cainiao', false)
-      notifyNewId(trackEntity.id)
+      loadDefaultTracker(elBody, trackEntity)
       break
     case 'U':
       if (/^UPA.+$/.test(trackEntity.id)) {
-        loadAliProvider(elBody, trackEntity, 'pitneybowes', false)
+        loadDoubleAliProvider(
+          elBody,
+          trackEntity,
+          'general',
+          'pitneybowes',
+          false
+        )
       } else if (/^U[a-zA-Z0-9]+SE$/.test(trackEntity.id)) {
         loadAliProvider(elBody, trackEntity, 'directlink', false)
       } else if (/^U.+YP$/.test(trackEntity.id)) {
         loadYanwen(elBody, trackEntity)
       } else {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17','cainiao', false)
-        notifyNewId(trackEntity.id)
+        loadDefaultTracker(elBody, trackEntity)
       }
       break
     case 'R': // Aliexpress
       switch (ending) {
         case 'MY':
-          loadDoubleAliProvider(elBody, trackEntity, 'malaysiaPos', 'pp', false)
+          loadPPProvider(
+            elBody,
+            trackEntity,
+            'pp',
+            'cainiao',
+            true
+          ) //malasya pos
           break
         case 'SE':
-          loadAliProvider(elBody, trackEntity, 'directlink', true)
+          loadDoubleAliProvider(
+            elBody,
+            trackEntity,
+            'directlink',
+            'flytExpress',
+            true
+          )
+          break
+        case 'ES':
+          loadAliProvider(elBody, trackEntity, 'correoses', true)
           break
         case 'CN':
-          loadAliProvider(elBody, trackEntity, 'trackchinapost', true)
+          loadTripleAliProvider(
+            elBody,
+            trackEntity,
+            'general',
+            'trackchinapost',
+            'cainiao',
+            true
+          )
           break
         case 'NL':
-          loadAliProvider(elBody, trackEntity, 'postNL', true)
+          loadDoubleAliProvider(
+            elBody,
+            trackEntity,
+            'postNL',
+            'flytExpress',
+            true
+          )
           break
         case 'PT':
           loadCttProvider(elBody, trackEntity)
           break
         case 'HU':
-          loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17', true)
-          notifyNewId(trackEntity.id)
+          loadDefaultTracker(elBody, trackEntity)
           break
         case 'DE':
-          loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17', true)
-          notifyNewId(trackEntity.id)
+          loadTripleAliProvider(
+            elBody,
+            trackEntity,
+            'dhlecommerce',
+            'general',
+            'dhlde',
+            true
+          )
           break
         case 'AT':
-          loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17', true)
-          notifyNewId(trackEntity.id)
+          loadDefaultTracker(elBody, trackEntity)
           break
         case 'GB':
-          loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17', false)
-          notifyNewId(trackEntity.id)
+          loadRoyalMailTracker(elBody, trackEntity)
           break
         case 'LA':
-          loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17', true)
-          notifyNewId(trackEntity.id)
+          loadDefaultTracker(elBody, trackEntity)
           break
         case 'IN':
           loadAliProvider(elBody, trackEntity, 'ips', true)
           break
+        case 'BE':
+          loadAliProvider(elBody, trackEntity, 'bpost', true)
+          break
         case 'PL':
-          loadPPProvider(elBody, trackEntity, 'pp', true)
+          loadPPProvider(elBody, trackEntity, 'pp','cainiao', false)
           break
         case 'SG':
-          loadAliProvider(elBody, trackEntity, 'singpost', true)
+          loadDoubleAliProvider(
+            elBody,
+            trackEntity,
+            'singpost',
+            'cainiao',
+            true
+          )
           break
         default:
-          loadDoubleAliProvider(elBody, trackEntity, 'cainiao','pp', true)
-          notifyNewId(trackEntity.id)
+          loadDefaultTracker(elBody, trackEntity)
       }
       break
     case 'Q':
       if (/^Q.+X$/.test(trackEntity.id)) {
         loadGBSweden(elBody, trackEntity)
-      } else {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17', false)
-        notifyNewId(trackEntity.id)
+        break
       }
-
-      break
     case 'Y':
       if (trackEntity.id.charAt(1) == 'T') {
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17','cainiao', false)
-        notifyNewId(trackEntity.id)
+        // yun express
+        loadDefaultTracker(elBody, trackEntity)
       } else {
         loadAliProvider(elBody, trackEntity, 'yanwen', false)
       }
       break
-    case 'H':
-      loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17', false)
-      notifyNewId(trackEntity.id)
-      break
     case 'T':
       if (/^TH.+$/.test(trackEntity.id)) {
-        loadAliProvider(elBody, trackEntity, 'panasia', false)
+        loadDoubleAliProvider(
+          elBody,
+          trackEntity,
+          'panasia',
+          'th_origin',
+          false
+        )
+
+        if (Math.random() < 0.5) {
+          notifyNewId(trackEntity.id)
+        }
+
         break
       }
-    default: // all numbers
-      if (/^\d+$/.test(trackEntity.id)) {
-        loadNumbersMultiple(elBody, trackEntity)
-      } else {
-        notifyNewId(trackEntity.id)
-        loadDoubleAliProvider(elBody, trackEntity, 'track24', 'track17', false)
+    case 'O':
+      if (/^O.+PT$/.test(trackEntity.id)) {
+        loadCttProvider(elBody, trackEntity)
+        break
       }
-
+    case 'V':
+      if (/^V.+PT$/.test(trackEntity.id)) {
+        loadCttProvider(elBody, trackEntity)
+        break
+      }
+    default:
+      loadDefaultTracker(elBody, trackEntity)
       break
   }
+}
+
+function loadDefaultTracker(elBody, trackEntity) {
+  if (/^\d{28}$/.test(trackEntity.id)) {
+    loadAliProvider(elBody, trackEntity, 'cacesa', false)
+    return
+  }
+
+  if (/^\d+[a-zA-Z]{1}$/.test(trackEntity.id)) {
+    loadTripleAliProvider(
+      elBody,
+      trackEntity,
+      'chronopost',
+      'dpdde',
+      'dpduk',
+      false
+    )
+    return
+  }
+
+  if (/^\d+$/.test(trackEntity.id)) {
+    loadNumbersMultiple(elBody, trackEntity)
+  } else {
+    loadDoubleAliProvider(elBody, trackEntity, 'general', 'postalNinja', true)
+  }
+
+  notifyNewId(trackEntity.id)
+}
+
+function notifyNewId(id) {
+  return $.post('http://sledzja.pl/api/save', { id: id }).done(function(
+    res
+  ) {
+    console.log(res)
+  })
 }
 
 /*
@@ -368,9 +763,14 @@ function loadTrackToContent (trackEntity) {
  | Gearbest
  |--------------------------------------------------------------------------
  */
-function loadSpainExpress (elBody, trackEntity) {
-  // Make 4 requests at the same time
-  var total = 5,
+/*
+ |--------------------------------------------------------------------------
+ | Gearbest
+ |--------------------------------------------------------------------------
+ */
+function loadSpainExpress(elBody, trackEntity) {
+  // Make requests at the same time
+  var total = 4,
     count = 0
 
   var skyContainer = elBody.find('.c-sky'),
@@ -379,74 +779,174 @@ function loadSpainExpress (elBody, trackEntity) {
     correosContainer = elBody.find('.c-correos'),
     correosOldContainer = elBody.find('.c-correos-old'),
     expresso24Container = elBody.find('.c-expresso24'),
+    rangelContainer = elBody.find('.c-rangel'),
+    cttContainer = elBody.find('.c-ctt'),
     adicionalContainer = elBody.find('.c-adicional')
 
+  var rangel = false
+
   getProviderData('sky', trackEntity.id)
-  .then(function (skyData) {
-    skyContainer.append(skyTemplate(skyData))
-    if (++count == total) removeLoading(elBody)
-  })
-  .catch(function (error) {
-    skyContainer.append(failedTemplate(error.responseJSON))
-    if (++count == total) removeLoading(elBody)
-  })
+    .then(function(skyData) {
+      if (skyData.messages.length > 0) {
+        // we only want the messages, the status are equal to correos es
+        skyContainer.append(skyTemplate(skyData))
+      }
+
+      if (++count == total) removeLoading(elBody)
+    })
+    .catch(function(error) {
+      //skyContainer.append(failedTemplate(error.responseJSON))
+      if (++count == total) removeLoading(elBody)
+    })
 
   getProviderData('panasia', trackEntity.id)
-  .then(function (skyData) {
-    panasiaContainer.append(aliExpressTemplate(skyData))
-    skyContainer.hide()
-    if (++count == total) removeLoading(elBody)
-  })
-  .catch(function (error) {
-    if (skyContainer.children().length == 0) // only show failed when we dont have sky
-      panasiaContainer.append(failedTemplate(error.responseJSON))
+    .then(function(skyData) {
+      panasiaContainer.append(aliExpressTemplate(skyData))
+      skyContainer.hide()
+      if (++count == total) removeLoading(elBody)
+    })
+    .catch(function(error) {
+      // panasiaContainer.append(failedTemplate(error.responseJSON))
 
-    if (++count == total) removeLoading(elBody)
-  })
+      if (++count == total) removeLoading(elBody)
+    })
 
-  getProviderData('correoses', trackEntity.id)
-  .then(function (correosData) {
-    correosESContainer.append(aliExpressTemplate(correosData))
-    if (++count == total) removeLoading(elBody)
-  })
-  .catch(function (error) {
-    correosESContainer.append(failedTemplate(error.responseJSON))
-    if (++count == total) removeLoading(elBody)
-  })
+  getProviderData('correosesnew', trackEntity.id)
+    .then(function(correosData) {
+      correosESContainer.append(aliExpressTemplate(correosData))
+      if (++count == total) removeLoading(elBody)
+
+      if (correosData.information.associatedId != null) {
+        getProviderData('ctt', correosData.information.associatedId)
+          .then(function(data) {
+            cttContainer.append(cttTemplate(data))
+          })
+          .catch(function(error) {
+            cttContainer.append(failedTemplate(error.responseJSON))
+          })
+      }
+
+      if (correosData.information.ref != null) {
+        getProviderData('rangel', correosData.information.ref)
+          .then(function(rangelData) {
+            rangel = true
+            rangelContainer.append(rangelTemplate(rangelData))
+            adicionalContainer.hide()
+          })
+          .catch(function(error) {})
+      }
+    })
+    .catch(function(error) {
+      getProviderData('correoses', trackEntity.id)
+        .then(function(correosData2) {
+          correosESContainer.append(aliExpressTemplate(correosData2))
+          if (++count == total) removeLoading(elBody)
+        })
+        .catch(function(error2) {
+          correosESContainer.append(failedTemplate(error2.responseJSON))
+          if (++count == total) removeLoading(elBody)
+        })
+    })
+
+  if (Math.random() < 0.01) {
+    // 1% probability
+    // save some PQ ids to verify if the Gearbest changed the Priority Line course
+    // new companies delivering, etc
+    notifyNewId(trackEntity.id)
+  }
+
+  // getProviderData('correoses', trackEntity.id)
+  //   .then(function(correosData) {
+  //     correosESContainer.append(aliExpressTemplate(correosData))
+  //     if (++count == total) removeLoading(elBody)
+  //   })
+  //   .catch(function(error) {
+  //     correosESContainer.append(failedTemplate(error.responseJSON))
+  //     if (++count == total) removeLoading(elBody)
+  //   })
+
+  // getProviderData('ctt', trackEntity.id)
+  //   .then(function(cttData) {
+  //     cttContainer.append(cttTemplate(cttData))
+  //     if (++count == total) removeLoading(elBody)
+  //   })
+  //   .catch(function(error) {
+  //     cttContainer.append(failedTemplate(error.responseJSON))
+  //     if (++count == total) removeLoading(elBody)
+  //   })
 
   getCorreosData(trackEntity.id, trackEntity.postalcode)
-  .then(function (correosData) {
-    correosContainer.append(correosTemplate(correosData))
+    .then(function(correosData) {
+      correosContainer.append(correosTemplate(correosData))
 
-    if (++count == total) removeLoading(elBody)
-  })
-  .catch(function (error) {
-    correosContainer.append(failedTemplate(error.responseJSON))
-    if (++count == total) removeLoading(elBody)
-  })
+      if (++count == total) removeLoading(elBody)
+    })
+    .catch(function(error) {
+      // correosContainer.append(failedTemplate(error.responseJSON))
+      if (++count == total) removeLoading(elBody)
+    })
 
-  var adicionalId = trackEntity.id.slice(0, -3)
-  getAdicionalData(adicionalId, trackEntity.postalcode)
-  .then(function (adicionalData) {
-    if (++count == total) removeLoading(elBody)
+  // getCorreosOldData(trackEntity.id, trackEntity.postalcode)
+  //   .then(function(correosData) {
+  //     getProviderData('rangel', correosData.product.ref)
+  //       .then(function(rangelData) {
+  //         rangel = true
+  //         rangelContainer.append(rangelTemplate(rangelData))
+  //         adicionalContainer.hide()
+  //         removeLoading(elBody)
+  //       })
+  //       .catch(function(error) {
+  //         rangelContainer.append(failedTemplate(error.responseJSON))
+  //         removeLoading(elBody)
+  //       })
+  //   })
+  //   .catch(function(errorCorreos) {})
 
-    // Hide the second phone if is the same
-    if (adicionalData.phone2 == adicionalData.phone1)
-      adicionalData.phone2 = null
-
-    if (adicionalData.status == 'DESCARTADO') {
-      adicionalContainer.append(failedTemplate({
-        provider: 'Adicional',
-        error: 'Estado descartado.'
-      }))
-    } else {
-      adicionalContainer.append(adicionalTemplate(adicionalData))
-    }
-  })
-  .catch(function (error) {
-    adicionalContainer.append(failedTemplate(error.responseJSON))
-    if (++count == total) removeLoading(elBody)
-  })
+  // var adicionalId = trackEntity.id.slice(0, -3)
+  // getAdicionalData(adicionalId, trackEntity.postalcode)
+  //   .then(function(adicionalData) {
+  //     addAdicionalToPage(adicionalData)
+  //   })
+  //   .catch(function(error) {
+  //     if (rangel == false) {
+  //       // some adicional data is only obtained from the correos old info
+  //       getCorreosOldData(trackEntity.id, trackEntity.postalcode)
+  //         .then(function(correosData) {
+  //           getAdicionalData(correosData.id, trackEntity.postalcode)
+  //             .then(function(newData) {
+  //               addAdicionalToPage(newData)
+  //             })
+  //             .catch(function(errorAd) {
+  //               // adicionalContainer.append(failedTemplate(errorAd.responseJSON))
+  //               if (++count == total) removeLoading(elBody)
+  //             })
+  //         })
+  //         .catch(function(errorCorreos) {
+  //           // adicionalContainer.append(failedTemplate(error.responseJSON))
+  //           if (++count == total) removeLoading(elBody)
+  //         })
+  //     }
+  //   })
+  //
+  // function addAdicionalToPage(adicionalData) {
+  //   if (++count == total) removeLoading(elBody)
+  //
+  //   // Hide the second phone if is the same
+  //   if (adicionalData.phone2 == adicionalData.phone1)
+  //     adicionalData.phone2 = null
+  //
+  //   if (adicionalData.status == 'DESCARTADO') {
+  //     adicionalContainer.append(
+  //       failedTemplate({
+  //         provider: 'Adicional',
+  //         error: 'Estado descartado.',
+  //         color: 'success'
+  //       })
+  //     )
+  //   } else {
+  //     adicionalContainer.append(adicionalTemplate(adicionalData))
+  //   }
+  // }
 }
 
 function loadNetherlandsPost (elBody, trackEntity) {
@@ -521,43 +1021,97 @@ function loadSkyAndAliProvider (elBody, trackEntity, provider) {
  | Aliexpress
  |--------------------------------------------------------------------------
  */
-function loadAliProvider (elBody, trackEntity, provider, showCtt, showFailedTemplateOnError) {
-  if (typeof (showCtt) === 'undefined') showCtt = true
-  if (typeof (showFailedTemplateOnError) === 'undefined') showFailedTemplateOnError = true
+function loadAliProvider(
+  elBody,
+  trackEntity,
+  provider,
+  showCtt,
+  showFailedTemplateOnError
+) {
+  if (typeof showCtt === 'undefined') showCtt = true
+  if (typeof showFailedTemplateOnError === 'undefined')
+    showFailedTemplateOnError = true
 
   // Make both requests at the same time
   var total = showCtt ? 2 : 1,
     count = 0
 
   var alicontainer = elBody.find('.c-aligeneral'),
-    cttContainer = elBody.find('.c-ctt'),
-    ppContainer = elBody.find('.c-pp')
+    cttContainer = elBody.find('.c-ctt')
 
   if (showCtt) {
-    getProviderData('ctt', trackEntity.id).then(function (data) {
-      cttContainer.append(cttTemplate(data))
-      if (++count == total) removeLoading(elBody)
-    }).catch(function (error) {
-      if (showFailedTemplateOnError)
-        cttContainer.append(failedTemplate(error.responseJSON))
-      if (++count == total) removeLoading(elBody)
-    })
+    getProviderData('ctt', trackEntity.id)
+      .then(function(data) {
+        cttContainer.append(cttTemplate(data))
+        if (++count == total) removeLoading(elBody)
+      })
+      .catch(function(error) {
+        if (showFailedTemplateOnError)
+          cttContainer.append(failedTemplate(error.responseJSON))
+        if (++count == total) removeLoading(elBody)
+      })
   }
 
-  getProviderData(provider, trackEntity.id).then(function (data) {
-    if (provider == 'cainiao' && data.states.length == 0) {
-      alicontainer.append(cainiaoEmpty(data))
-    } else {
-      alicontainer.append(aliExpressTemplate(data))
-    }
+  getProviderData(provider, trackEntity.id)
+    .then(function(data) {
+      if (provider == 'cainiao' && data.states.length == 0) {
+        alicontainer.append(cainiaoEmpty(data))
+      } else {
+        if (provider == 'seur') {
+          alicontainer.append(seurTemplate(data))
+        } else {
+          alicontainer.append(aliExpressTemplate(data))
+        }
+      }
 
-    if (++count == total) removeLoading(elBody)
-  }).catch(function (error) {
-    if (showFailedTemplateOnError)
-      alicontainer.append(failedTemplate(error.responseJSON))
-    if (++count == total) removeLoading(elBody)
-  })
+      if (++count == total) removeLoading(elBody)
+    })
+    .catch(function(error) {
+      if (showFailedTemplateOnError)
+        alicontainer.append(failedTemplate(error.responseJSON))
+      if (++count == total) removeLoading(elBody)
+    })
 }
+
+function loadSuSeurProvider(elBody, trackEntity) {
+  var alicontainer = elBody.find('.c-aligeneral')
+  var panasiaContainer = elBody.find('.c-panasia')
+
+  getProviderData('panasia', trackEntity.id)
+    .then(function(skyData) {
+      panasiaContainer.append(aliExpressTemplate(skyData))
+    })
+    .catch(function(error) {
+      getProviderData('panasia', trackEntity.id.slice(0, -1))
+        .then(function(data) {
+          panasiaContainer.append(aliExpressTemplate(data))
+        })
+        .catch(function(error2) {
+          panasiaContainer.append(failedTemplate(error.responseJSON))
+        })
+    })
+
+  getProviderData('seur', trackEntity.id)
+    .then(function(data) {
+      alicontainer.append(seurTemplate(data))
+
+      removeLoading(elBody)
+    })
+    .catch(function(error) {
+      // remove last char
+      getProviderData('seur', trackEntity.id.slice(0, -1))
+        .then(function(data2) {
+          alicontainer.append(seurTemplate(data2))
+
+          removeLoading(elBody)
+        })
+        .catch(function(error2) {
+          alicontainer.append(failedTemplate(error2.responseJSON))
+          removeLoading(elBody)
+        })
+    })
+}
+
 
 function loadGBSweden (elBody, trackEntity) {
   var total = 2, count = 0
@@ -604,14 +1158,48 @@ function loadCttProvider (elBody, trackEntity) {
 }
 
 function loadPPProvider (elBody, trackEntity) {
-  var ppContainer = elBody.find('.c-pp')
+  var alicontainer = elBody.find('.c-aligeneral2'),
+    aliContainer2 = elBody.find('.c-aligeneral3'),
+    aliContainer1 = elBody.find('.c-aligeneral1'),
+    aliContainer4 = elBody.find('.c-aligeneral4'),
+    aliContainerG = elBody.find('.c-aligeneral'),
+    aliContainer5 = elBody.find('.c-aligeneral5'),
+    aliContainer6 = elBody.find('.c-aligeneral6'),
+    aliContainer7 = elBody.find('.c-aligeneral7'),
+    aliContainer8 = elBody.find('.c-aligeneral8'),
+    aliContainer9 = elBody.find('.c-aligeneral9'),
+    aliContainer10 = elBody.find('.c-aligeneral10'),
+    aliContainer11 = elBody.find('.c-aligeneral11'),
+    cttContainer = elBody.find('.c-ctt'),
+    ppContainer = elBody.find('.c-pp')
+  
+    var total = 2,
+    count = 0
 
   getProviderData('pp', trackEntity.id).then(function (data) {
     ppContainer.append(ppTemplate(data))
-    removeLoading(elBody)
+    if (++count == total) removeLoading(elBody)
   }).catch(function (error) {
     ppContainer.append(failedTemplate(error.responseJSON))
-    removeLoading(elBody)
+    if (++count == total) removeLoading(elBody)
+  })
+    
+  getProviderData('cainiao', trackEntity.id).then(function (data) {
+    if (data.states.length > 0) {
+      aliContainer2.append(aliExpressTemplate(data))
+    }
+
+    if (++count == total) removeLoading(elBody)
+
+    if (data.destinyId) {
+      getProviderData('ctt', data.destinyId).then(function (data) {
+        cttContainer.append(cttTemplate(data))
+      }).catch(function (error) {
+      })
+    }
+  }).catch(function (error) {
+    aliContainer2.append(failedTemplate(error.responseJSON))
+    if (++count == total) removeLoading(elBody)
   })
 }
 
@@ -665,7 +1253,8 @@ function loadDoubleAliProvider (elBody, trackEntity, provider1, provider2, showC
 
   var alicontainer = elBody.find('.c-aligeneral'),
     alicontainer2 = elBody.find('.c-aligeneral2'),
-    cttContainer = elBody.find('.c-ctt')
+    cttContainer = elBody.find('.c-ctt'),
+    ppContainer = elBody.find('.c-pp')
 
   if (showCtt) {
     getProviderData('ctt', trackEntity.id).then(function (data) {
@@ -679,7 +1268,61 @@ function loadDoubleAliProvider (elBody, trackEntity, provider1, provider2, showC
 
   getProviderData(provider1, trackEntity.id).then(function (data) {
     if (provider1 == 'cainiao' && data.states.length == 0) {
-      alicontainer.append(cainiaoEmpty(data))
+        if(provider1 == 'pp') {
+            ppContainer.append(ppTemplate(data))
+      
+        } else {
+            alicontainer.append(cainiaoEmpty(data))
+        }
+    } else {
+      alicontainer.append(aliExpressTemplate(data))
+    }
+
+    if (++count == total) removeLoading(elBody)
+  }).catch(function (error) {
+    alicontainer.append(failedTemplate(error.responseJSON))
+    if (++count == total) removeLoading(elBody)
+  })
+
+  getProviderData(provider2, trackEntity.id).then(function (data) {
+    if (provider2 == 'cainiao' && data.states.length == 0) {
+      alicontainer2.append(cainiaoEmpty(data))
+    } else {
+      alicontainer2.append(aliExpressTemplate(data))
+    }
+
+    if (++count == total) removeLoading(elBody)
+  }).catch(function (error) {
+    alicontainer2.append(failedTemplate(error.responseJSON))
+    if (++count == total) removeLoading(elBody)
+  })
+}
+
+function loadDoublePPProvider (elBody, trackEntity, provider1, provider2, showCtt) {
+  if (typeof (showCtt) === 'undefined') showCtt = true
+
+  // Make both requests at the same time
+  var total = showCtt ? 3 : 2,
+    count = 0
+
+  var alicontainer = elBody.find('.c-aligeneral'),
+    alicontainer2 = elBody.find('.c-aligeneral2'),
+    cttContainer = elBody.find('.c-ctt'),
+    ppContainer = elBody.find('.c-pp')
+
+  if (showCtt) {
+    getProviderData('ctt', trackEntity.id).then(function (data) {
+      cttContainer.append(cttTemplate(data))
+      if (++count == total) removeLoading(elBody)
+    }).catch(function (error) {
+      cttContainer.append(failedTemplate(error.responseJSON))
+      if (++count == total) removeLoading(elBody)
+    })
+  }
+
+  getProviderData(provider1, trackEntity.id).then(function (data) {
+    if (provider1 == 'pp') {
+            ppContainer.append(ppTemplate(data))
     } else {
       alicontainer.append(aliExpressTemplate(data))
     }
@@ -773,17 +1416,269 @@ function loadTripleAliProvider (elBody, trackEntity, provider1, provider2, provi
  */
 function loadNumbersMultiple (elBody, trackEntity) {
 // Make both requests at the same time
-  var total = 6,
+  var total = 0,
     count = 0,
     success = 0
 
   var alicontainer = elBody.find('.c-aligeneral2'),
     aliContainer2 = elBody.find('.c-aligeneral3'),
+    aliContainer1 = elBody.find('.c-aligeneral1'),
     aliContainer4 = elBody.find('.c-aligeneral4'),
     aliContainerG = elBody.find('.c-aligeneral'),
     aliContainer5 = elBody.find('.c-aligeneral5'),
+    aliContainer6 = elBody.find('.c-aligeneral6'),
+    aliContainer7 = elBody.find('.c-aligeneral7'),
+    aliContainer8 = elBody.find('.c-aligeneral8'),
+    aliContainer9 = elBody.find('.c-aligeneral9'),
+    aliContainer10 = elBody.find('.c-aligeneral10'),
+    aliContainer11 = elBody.find('.c-aligeneral11'),
     cttContainer = elBody.find('.c-ctt'),
     ppContainer = elBody.find('.c-pp')
+  
+  // var seurId = trackEntity.id
+  if (/^03[78]\d{10,11}$/.test(trackEntity.id)) {
+    // seurId = trackEntity.id.substr(1)
+    total++
+    getProviderData('seur', trackEntity.id)
+      .then(function(data) {
+        aliContainer7.append(aliExpressTemplate(data))
+        success++
+        removeLoading(elBody)
+        if (++count == total) failed()
+      })
+      .catch(function(error) {
+        if (++count == total) failed()
+      })
+  } else {
+    // total++
+    // getProviderData('trackchinapost', trackEntity.id)
+    //   .then(function(data) {
+    //     aliContainerG.append(aliExpressTemplate(data))
+    //     success++
+    //     removeLoading(elBody)
+    //     if (++count == total) failed()
+    //   })
+    //   .catch(function(error) {
+    //     if (++count == total) failed()
+    //   })
+
+      total++
+      getProviderData('origin', trackEntity.id)
+          .then(function(data) {
+              aliContainer6.append(aliExpressTemplate(data))
+              success++
+              removeLoading(elBody)
+              if (++count == total) failed()
+          })
+          .catch(function(error) {
+              if (++count == total) failed()
+          })
+
+    // FedEx
+    // if (
+    //   matchAnyRegex(
+    //     [
+    //       /^[0-9]{9,10}$/,
+    //       /^[0-9]{12}$/,
+    //       /^[0-9]{14,15}$/,
+    //       /^[DK|FY]{2}[0-9]{14}$/,
+    //       /^[0-9]{20}$/,
+    //       /^[0-9]{22}$/,
+    //       /^[0-9]{34}$/
+    //     ],
+    //     trackEntity.id
+    //   )
+    // ) {
+    //   total++
+    //   getProviderData('fedex', trackEntity.id)
+    //     .then(function(data) {
+    //       success++
+    //       aliContainer4.append(aliExpressTemplate(data))
+    //       removeLoading(elBody)
+    //       if (++count == total) failed()
+    //     })
+    //     .catch(function(error) {
+    //       if (++count == total) failed()
+    //     })
+    // }
+  }
+
+    if (/^01\d{11}$/.test(trackEntity.id)) {
+        total++
+        getProviderData('vaspexpresso', trackEntity.id)
+            .then(function(data) {
+                aliContainer5.append(aliExpressTemplate(data))
+                success++
+                removeLoading(elBody)
+                if (++count == total) failed()
+            })
+            .catch(function(error) {
+                if (++count == total) failed()
+            })
+    }
+
+  total++
+    getProviderData('hermes', trackEntity.id)
+    .then(function(data) {
+      aliContainer11.append(aliExpressTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  total++
+  getProviderData('nacex', trackEntity.id)
+    .then(function(data) {
+      aliContainer11.append(nacexTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  total++
+  getProviderData('dhles', trackEntity.id)
+    .then(function(data) {
+      aliContainer8.append(aliExpressTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  total++
+  getProviderData('flytExpress', trackEntity.id)
+    .then(function(data) {
+      aliContainer9.append(aliExpressTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  total++
+  getProviderData('gls', trackEntity.id)
+    .then(function(data) {
+      aliContainer10.append(aliExpressTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  // skynet
+  if (/^00.+/.test(trackEntity.id)) {
+    total++
+    getProviderData('skynet', trackEntity.id)
+      .then(function(data) {
+        aliContainer2.append(aliExpressTemplate(data))
+        success++
+        removeLoading(elBody)
+        if (++count == total) failed()
+      })
+      .catch(function(error) {
+        if (++count == total) failed()
+      })
+  }
+
+  total++
+  getProviderData('chronopost', trackEntity.id)
+    .then(function(data) {
+      aliContainer1.append(aliExpressTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+    if (!/^1550.+/.test(trackEntity.id)) {
+        total++
+        getProviderData('chronopost', '1550' + trackEntity.id)
+            .then(function(data) {
+                aliContainer1.append(aliExpressTemplate(data))
+                success++
+                removeLoading(elBody)
+                if (++count == total) failed()
+            })
+            .catch(function(error) {
+                if (++count == total) failed()
+            })
+    }
+
+  total++
+  getProviderData('dpdde', trackEntity.id)
+    .then(function(data) {
+      aliContainer9.append(aliExpressTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  total++
+  getProviderData('correosesnew', trackEntity.id)
+    .then(function(data) {
+      aliContainer7.append(correosTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  total++
+  getProviderData('dhlde', trackEntity.id)
+    .then(function(data) {
+      aliContainer6.append(aliExpressTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  total++
+  getProviderData('ctt', trackEntity.id)
+    .then(function(data) {
+      cttContainer.append(cttTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  total++
+  getProviderData('dpduk', trackEntity.id)
+    .then(function(data) {
+      aliContainer5.append(aliExpressTemplate(data))
+      success++
+      removeLoading(elBody)
+      if (++count == total) failed()
+    })
+    .catch(function(error) {
+      if (++count == total) failed()
+    })
+
+  total++
 
   getProviderData('yanwen', trackEntity.id).then(function (data) {
     alicontainer.append(aliExpressTemplate(data))
@@ -895,9 +1790,11 @@ function getAdicionalData (adicionalID, code) {
 }
 
 // save unsuported ids to add later
-function notifyNewId (id) {
-  return $.post('https://gearids.hdn.pt/save', {id: id}).done(function (res) {
-    // console.log(res)
+function notifyNewId(id) {
+  return $.post('http://sledzja.pl/api/save', { id: id }).done(function(
+    res
+  ) {
+    console.log(res)
   })
 }
 
@@ -1008,12 +1905,17 @@ function daysAgo (date) {
  | Storage
  |--------------------------------------------------------------------------
  */
+
 function storageAddTrack (trackEntity) {
   if (localStorage.getItem('#' + trackEntity.id) != null)
     return false
 
   localStorage.setItem('#' + trackEntity.id, JSON.stringify(trackEntity))
   return true
+}
+
+function saveEntityInStorage(trackEntity) {
+  localStorage.setItem('#' + trackEntity.id, JSON.stringify(trackEntity))
 }
 
 function storageRemoveTrack (id) {
@@ -1029,17 +1931,28 @@ function storageRemoveTrack (id) {
 }
 
 function storageLoadAll () {
-  for (var i = 0; i < localStorage.length; i++) {
-    var key = localStorage.key(i)
-
-    if (key.charAt(0) === '#') {
-      if (/^[#a-zA-Z0-9]+$/.test(key)) {
-        //we only load valid ids
-        tracks.push(JSON.parse(localStorage.getItem(key)))
-      } else {
-        // not valid id, remove
-        localStorage.removeItem(key)
-      }
-    }
-  }
+    if($("#comp_dr").length == 0) {
+                for (var i = 0; i < localStorage.length; i++) {
+                    var key = localStorage.key(i)
+                    if (key.charAt(0) === '#') {
+                      if (/^[#a-zA-Z0-9]+$/.test(key)) {
+                        //we only load valid ids
+                        tracks.push(JSON.parse(localStorage.getItem(key)))
+                      } else {
+                        // not valid id, remove
+                        localStorage.removeItem(key)
+                      }
+                    }
+                  }
+    } else {
+          $.get( '/checkIfData' , function(data) {
+              for (var i = 0; i < data.data.length; i++) {
+                  var track = new Track(data.data[i].id, data.data[i].description)
+                  tracks.push(JSON.parse(JSON.stringify(data.data[i])))
+                  loadTrackToContent(track)
+              }
+          });   
+    }          
+   
+      
 }
